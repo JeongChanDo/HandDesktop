@@ -1,10 +1,15 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
+
+
+#include "Windows/AllowWindowsPlatformTypes.h"
+#include <Windows.h>
+#include "Windows/HideWindowsPlatformTypes.h"
+
 #include "PreOpenCVHeaders.h"
 #include <opencv2/opencv.hpp>
 #include "PostOpenCVHeaders.h"
-
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
@@ -32,4 +37,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UTexture2D* imageTexture;
 	UTexture2D* MatToTexture2D(const cv::Mat InMat);
+
+
+	cv::Mat GetScreenToCVMat();
 };

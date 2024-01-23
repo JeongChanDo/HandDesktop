@@ -7,6 +7,7 @@
 void ADesktopGameModeBase::BeginPlay()
 {
 	Super::BeginPlay();
+
 	capture = cv::VideoCapture(0);
 
 	if (!capture.isOpened())
@@ -23,13 +24,16 @@ void ADesktopGameModeBase::BeginPlay()
 
 void ADesktopGameModeBase::ReadFrame()
 {
+	/*
 	if (!capture.isOpened())
 	{
 		return;
 	}
 	capture.read(image);
+	*/
 
-	imageTexture = MatToTexture2D(image);
+	cv::Mat desktopImage = GetScreenToCVMat();
+	imageTexture = MatToTexture2D(desktopImage);
 }
 
 
@@ -57,8 +61,39 @@ UTexture2D* ADesktopGameModeBase::MatToTexture2D(const cv::Mat InMat)
 		Texture->UpdateResource();
 		return Texture;
 	}
+	else if (InMat.type() == CV_8UC4)
+	{
+		//actually copy the data to the new texture
+		FTexture2DMipMap& Mip = Texture->GetPlatformData()->Mips[0];
+		void* Data = Mip.BulkData.Lock(LOCK_READ_WRITE);//lock the texture data
+		FMemory::Memcpy(Data, InMat.data, InMat.total() * InMat.elemSize());//copy the data
+		Mip.BulkData.Unlock();
+		Texture->PostEditChange();
+		Texture->UpdateResource();
+		return Texture;
+	}
 	//if the texture hasnt the right pixel format, abort.
 	Texture->PostEditChange();
 	Texture->UpdateResource();
 	return Texture;
+}
+
+
+
+cv::Mat ADesktopGameModeBase::GetScreenToCVMat()
+{
+	HDC hScreenDC = GetDC(NULL);
+	HDC hMemoryDC = CreateCompatibleDC(hScreenDC);
+	int screenWidth = GetDeviceCaps(hScreenDC, HORZRES);
+	int screenHeight = GetDeviceCaps(hScreenDC, VERTRES);
+
+	HBITMAP hBitmap = CreateCompatibleBitmap(hScreenDC, screenWidth, screenHeight);
+	HBITMAP hOldBitmap = (HBITMAP)SelectObject(hMemoryDC, hBitmap);
+	BitBlt(hMemoryDC, 0, 0, screenWidth, screenHeight, hScreenDC, 0, 0, SRCCOPY);
+	SelectObject(hMemoryDC, hOldBitmap);
+
+	cv::Mat matImage(screenHeight, screenWidth, CV_8UC4);
+	GetBitmapBits(hBitmap, matImage.total() * matImage.elemSize(), matImage.data);
+
+	return matImage;
 }
