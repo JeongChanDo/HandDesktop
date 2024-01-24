@@ -19,7 +19,17 @@ void ADesktopGameModeBase::BeginPlay()
 	{
 		UE_LOG(LogTemp, Log, TEXT("Open Webcam Success"));
 	}
-	imageTexture = UTexture2D::CreateTransient(1920, 1080, PF_B8G8R8A8);
+	imageTexture = UTexture2D::CreateTransient(monitorWidth, monitorHeight, PF_B8G8R8A8);
+
+
+
+	imageScreen1 = cv::Mat(monitorHeight, monitorWidth, CV_8UC4);
+	imageScreen2 = cv::Mat(monitorHeight, monitorWidth, CV_8UC4);
+	imageScreen3 = cv::Mat(monitorHeight, monitorWidth, CV_8UC4);
+	imageTextureScreen1 = UTexture2D::CreateTransient(monitorWidth, monitorHeight, PF_B8G8R8A8);
+	imageTextureScreen2 = UTexture2D::CreateTransient(monitorWidth, monitorHeight, PF_B8G8R8A8);
+	imageTextureScreen3 = UTexture2D::CreateTransient(monitorWidth, monitorHeight, PF_B8G8R8A8);
+
 }
 
 
@@ -31,10 +41,14 @@ void ADesktopGameModeBase::ReadFrame()
 		return;
 	}
 	capture.read(image);
-	*/
 
 	cv::Mat desktopImage = GetScreenToCVMat();
 	MatToTexture2D(desktopImage);
+	*/
+
+	ScreensToCVMats();
+	CVMatsToTextures();
+
 }
 
 
@@ -75,6 +89,9 @@ void ADesktopGameModeBase::MatToTexture2D(const cv::Mat InMat)
 
 
 
+
+
+
 cv::Mat ADesktopGameModeBase::GetScreenToCVMat()
 {
 	HDC hScreenDC = GetDC(NULL);
@@ -84,7 +101,7 @@ cv::Mat ADesktopGameModeBase::GetScreenToCVMat()
 
 	HBITMAP hBitmap = CreateCompatibleBitmap(hScreenDC, screenWidth, screenHeight);
 	HBITMAP hOldBitmap = (HBITMAP)SelectObject(hMemoryDC, hBitmap);
-	BitBlt(hMemoryDC, 0, 0, screenWidth, screenHeight, hScreenDC, 1920, 0, SRCCOPY);
+	BitBlt(hMemoryDC, 0, 0, screenWidth, screenHeight, hScreenDC, 0, 0, SRCCOPY);
 	SelectObject(hMemoryDC, hOldBitmap);
 
 	cv::Mat matImage(screenHeight, screenWidth, CV_8UC4);
@@ -98,4 +115,79 @@ cv::Mat ADesktopGameModeBase::GetScreenToCVMat()
 
 
 	return matImage;
+}
+
+
+void ADesktopGameModeBase::ScreensToCVMats()
+{
+	HDC hScreenDC = GetDC(NULL);
+	HDC hMemoryDC = CreateCompatibleDC(hScreenDC);
+	int screenWidth = GetDeviceCaps(hScreenDC, HORZRES);
+	int screenHeight = GetDeviceCaps(hScreenDC, VERTRES);
+
+	HBITMAP hBitmap = CreateCompatibleBitmap(hScreenDC, screenWidth, screenHeight);
+	HBITMAP hOldBitmap = (HBITMAP)SelectObject(hMemoryDC, hBitmap);
+
+	//screen 1
+	BitBlt(hMemoryDC, 0, 0, screenWidth, screenHeight, hScreenDC, 0, 0, SRCCOPY);
+	GetBitmapBits(hBitmap, imageScreen1.total() * imageScreen1.elemSize(), imageScreen1.data);
+
+	//screen 2
+	BitBlt(hMemoryDC, 0, 0, screenWidth, screenHeight, hScreenDC, 1920, 0, SRCCOPY);
+	GetBitmapBits(hBitmap, imageScreen2.total() * imageScreen2.elemSize(), imageScreen2.data);
+
+	//screen 3
+	BitBlt(hMemoryDC, 0, 0, screenWidth, screenHeight, hScreenDC, 3840, 0, SRCCOPY);
+	GetBitmapBits(hBitmap, imageScreen3.total() * imageScreen3.elemSize(), imageScreen3.data);
+	SelectObject(hMemoryDC, hOldBitmap);
+
+
+	DeleteDC(hScreenDC);
+	DeleteDC(hMemoryDC);
+
+	DeleteObject(hBitmap);
+	DeleteObject(hOldBitmap);
+
+}
+
+
+void ADesktopGameModeBase::CVMatsToTextures()
+{
+	for (int i = 0; i < 3; i++)
+	{
+		if (i == 0)
+		{
+			FTexture2DMipMap& Mip = imageTextureScreen1->GetPlatformData()->Mips[0];
+			void* Data = Mip.BulkData.Lock(LOCK_READ_WRITE);//lock the texture data
+			FMemory::Memcpy(Data, imageScreen1.data, imageScreen1.total() * imageScreen1.elemSize());//copy the data
+			Mip.BulkData.Unlock();
+
+			imageTextureScreen1->PostEditChange();
+			imageTextureScreen1->UpdateResource();
+		}
+		else if (i == 1)
+		{
+			FTexture2DMipMap& Mip = imageTextureScreen2->GetPlatformData()->Mips[0];
+			void* Data = Mip.BulkData.Lock(LOCK_READ_WRITE);//lock the texture data
+			FMemory::Memcpy(Data, imageScreen2.data, imageScreen2.total() * imageScreen2.elemSize());//copy the data
+			Mip.BulkData.Unlock();
+
+			imageTextureScreen2->PostEditChange();
+			imageTextureScreen2->UpdateResource();
+		}
+		else if (i == 2)
+		{
+			FTexture2DMipMap& Mip = imageTextureScreen3->GetPlatformData()->Mips[0];
+			void* Data = Mip.BulkData.Lock(LOCK_READ_WRITE);//lock the texture data
+			FMemory::Memcpy(Data, imageScreen3.data, imageScreen3.total() * imageScreen3.elemSize());//copy the data
+			Mip.BulkData.Unlock();
+
+			imageTextureScreen3->PostEditChange();
+			imageTextureScreen3->UpdateResource();
+		}
+
+
+	}
+
+
 }

@@ -38,6 +38,23 @@ public:
 	UTexture2D* imageTexture;
 	void MatToTexture2D(const cv::Mat InMat);
 
-
 	cv::Mat GetScreenToCVMat();
+
+
+
+
+	int monitorWidth = 1920;
+	int monitorHeight = 1080;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UTexture2D* imageTextureScreen1;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UTexture2D* imageTextureScreen2;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UTexture2D* imageTextureScreen3;
+	cv::Mat imageScreen1;
+	cv::Mat imageScreen2;
+	cv::Mat imageScreen3;
+
+	void ScreensToCVMats();
+	void CVMatsToTextures();
 };
