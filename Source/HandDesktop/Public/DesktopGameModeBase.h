@@ -36,7 +36,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UTexture2D* imageTexture;
-	UTexture2D* MatToTexture2D(const cv::Mat InMat);
+	void MatToTexture2D(const cv::Mat InMat);
 
 
 	cv::Mat GetScreenToCVMat();

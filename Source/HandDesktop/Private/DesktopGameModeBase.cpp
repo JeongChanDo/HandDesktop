@@ -19,6 +19,7 @@ void ADesktopGameModeBase::BeginPlay()
 	{
 		UE_LOG(LogTemp, Log, TEXT("Open Webcam Success"));
 	}
+	imageTexture = UTexture2D::CreateTransient(1920, 1080, PF_B8G8R8A8);
 }
 
 
@@ -33,15 +34,12 @@ void ADesktopGameModeBase::ReadFrame()
 	*/
 
 	cv::Mat desktopImage = GetScreenToCVMat();
-	imageTexture = MatToTexture2D(desktopImage);
+	MatToTexture2D(desktopImage);
 }
 
 
-UTexture2D* ADesktopGameModeBase::MatToTexture2D(const cv::Mat InMat)
+void ADesktopGameModeBase::MatToTexture2D(const cv::Mat InMat)
 {
-	//create new texture, set its values
-	UTexture2D* Texture = UTexture2D::CreateTransient(InMat.cols, InMat.rows, PF_B8G8R8A8);
-
 	if (InMat.type() == CV_8UC3)//example for pre-conversion of Mat
 	{
 		cv::Mat bgraImage;
@@ -53,29 +51,26 @@ UTexture2D* ADesktopGameModeBase::MatToTexture2D(const cv::Mat InMat)
 		//Texture->UpdateResource();
 
 		//actually copy the data to the new texture
-		FTexture2DMipMap& Mip = Texture->GetPlatformData()->Mips[0];
+		FTexture2DMipMap& Mip = imageTexture->GetPlatformData()->Mips[0];
 		void* Data = Mip.BulkData.Lock(LOCK_READ_WRITE);//lock the texture data
 		FMemory::Memcpy(Data, bgraImage.data, bgraImage.total() * bgraImage.elemSize());//copy the data
 		Mip.BulkData.Unlock();
-		Texture->PostEditChange();
-		Texture->UpdateResource();
-		return Texture;
+		imageTexture->PostEditChange();
+		imageTexture->UpdateResource();
 	}
 	else if (InMat.type() == CV_8UC4)
 	{
 		//actually copy the data to the new texture
-		FTexture2DMipMap& Mip = Texture->GetPlatformData()->Mips[0];
+		FTexture2DMipMap& Mip = imageTexture->GetPlatformData()->Mips[0];
 		void* Data = Mip.BulkData.Lock(LOCK_READ_WRITE);//lock the texture data
 		FMemory::Memcpy(Data, InMat.data, InMat.total() * InMat.elemSize());//copy the data
 		Mip.BulkData.Unlock();
-		Texture->PostEditChange();
-		Texture->UpdateResource();
-		return Texture;
+		imageTexture->PostEditChange();
+		imageTexture->UpdateResource();
 	}
 	//if the texture hasnt the right pixel format, abort.
-	Texture->PostEditChange();
-	Texture->UpdateResource();
-	return Texture;
+	imageTexture->PostEditChange();
+	imageTexture->UpdateResource();
 }
 
 
@@ -89,11 +84,18 @@ cv::Mat ADesktopGameModeBase::GetScreenToCVMat()
 
 	HBITMAP hBitmap = CreateCompatibleBitmap(hScreenDC, screenWidth, screenHeight);
 	HBITMAP hOldBitmap = (HBITMAP)SelectObject(hMemoryDC, hBitmap);
-	BitBlt(hMemoryDC, 0, 0, screenWidth, screenHeight, hScreenDC, 0, 0, SRCCOPY);
+	BitBlt(hMemoryDC, 0, 0, screenWidth, screenHeight, hScreenDC, 1920, 0, SRCCOPY);
 	SelectObject(hMemoryDC, hOldBitmap);
 
 	cv::Mat matImage(screenHeight, screenWidth, CV_8UC4);
 	GetBitmapBits(hBitmap, matImage.total() * matImage.elemSize(), matImage.data);
+
+	DeleteDC(hScreenDC);
+	DeleteDC(hMemoryDC);
+
+	DeleteObject(hBitmap);
+	DeleteObject(hOldBitmap);
+
 
 	return matImage;
 }
