@@ -8,7 +8,7 @@ void ADesktopGameModeBase::BeginPlay()
 {
 	Super::BeginPlay();
 
-	capture = cv::VideoCapture(0);
+	capture = cv::VideoCapture(1);
 
 	if (!capture.isOpened())
 	{
@@ -19,8 +19,7 @@ void ADesktopGameModeBase::BeginPlay()
 	{
 		UE_LOG(LogTemp, Log, TEXT("Open Webcam Success"));
 	}
-	imageTexture = UTexture2D::CreateTransient(monitorWidth, monitorHeight, PF_B8G8R8A8);
-
+	webcamTexture = UTexture2D::CreateTransient(monitorWidth, monitorHeight, PF_B8G8R8A8);
 
 
 	imageScreen1 = cv::Mat(monitorHeight, monitorWidth, CV_8UC4);
@@ -35,20 +34,18 @@ void ADesktopGameModeBase::BeginPlay()
 
 void ADesktopGameModeBase::ReadFrame()
 {
-	/*
+
 	if (!capture.isOpened())
 	{
 		return;
 	}
-	capture.read(image);
+	capture.read(webcamImage);
+	MatToTexture2D(webcamImage);
 
-	cv::Mat desktopImage = GetScreenToCVMat();
-	MatToTexture2D(desktopImage);
-	*/
+
 
 	ScreensToCVMats();
 	CVMatsToTextures();
-
 }
 
 
@@ -56,66 +53,39 @@ void ADesktopGameModeBase::MatToTexture2D(const cv::Mat InMat)
 {
 	if (InMat.type() == CV_8UC3)//example for pre-conversion of Mat
 	{
+		cv::Mat resizedImage;
+		cv::resize(InMat, resizedImage, cv::Size(monitorWidth, monitorHeight));
 		cv::Mat bgraImage;
 		//if the Mat is in BGR space, convert it to BGRA. There is no three channel texture in UE (at least with eight bit)
-		cv::cvtColor(InMat, bgraImage, cv::COLOR_BGR2BGRA);
+		cv::cvtColor(resizedImage, bgraImage, cv::COLOR_BGR2BGRA);
 
 		//Texture->SRGB = 0;//set to 0 if Mat is not in srgb (which is likely when coming from a webcam)
 		//other settings of the texture can also be changed here
 		//Texture->UpdateResource();
 
 		//actually copy the data to the new texture
-		FTexture2DMipMap& Mip = imageTexture->GetPlatformData()->Mips[0];
+		FTexture2DMipMap& Mip = webcamTexture->GetPlatformData()->Mips[0];
 		void* Data = Mip.BulkData.Lock(LOCK_READ_WRITE);//lock the texture data
 		FMemory::Memcpy(Data, bgraImage.data, bgraImage.total() * bgraImage.elemSize());//copy the data
 		Mip.BulkData.Unlock();
-		imageTexture->PostEditChange();
-		imageTexture->UpdateResource();
+		webcamTexture->PostEditChange();
+		webcamTexture->UpdateResource();
 	}
 	else if (InMat.type() == CV_8UC4)
 	{
 		//actually copy the data to the new texture
-		FTexture2DMipMap& Mip = imageTexture->GetPlatformData()->Mips[0];
+		FTexture2DMipMap& Mip = webcamTexture->GetPlatformData()->Mips[0];
 		void* Data = Mip.BulkData.Lock(LOCK_READ_WRITE);//lock the texture data
 		FMemory::Memcpy(Data, InMat.data, InMat.total() * InMat.elemSize());//copy the data
 		Mip.BulkData.Unlock();
-		imageTexture->PostEditChange();
-		imageTexture->UpdateResource();
+		webcamTexture->PostEditChange();
+		webcamTexture->UpdateResource();
 	}
 	//if the texture hasnt the right pixel format, abort.
-	imageTexture->PostEditChange();
-	imageTexture->UpdateResource();
+	webcamTexture->PostEditChange();
+	webcamTexture->UpdateResource();
 }
 
-
-
-
-
-
-cv::Mat ADesktopGameModeBase::GetScreenToCVMat()
-{
-	HDC hScreenDC = GetDC(NULL);
-	HDC hMemoryDC = CreateCompatibleDC(hScreenDC);
-	int screenWidth = GetDeviceCaps(hScreenDC, HORZRES);
-	int screenHeight = GetDeviceCaps(hScreenDC, VERTRES);
-
-	HBITMAP hBitmap = CreateCompatibleBitmap(hScreenDC, screenWidth, screenHeight);
-	HBITMAP hOldBitmap = (HBITMAP)SelectObject(hMemoryDC, hBitmap);
-	BitBlt(hMemoryDC, 0, 0, screenWidth, screenHeight, hScreenDC, 0, 0, SRCCOPY);
-	SelectObject(hMemoryDC, hOldBitmap);
-
-	cv::Mat matImage(screenHeight, screenWidth, CV_8UC4);
-	GetBitmapBits(hBitmap, matImage.total() * matImage.elemSize(), matImage.data);
-
-	DeleteDC(hScreenDC);
-	DeleteDC(hMemoryDC);
-
-	DeleteObject(hBitmap);
-	DeleteObject(hOldBitmap);
-
-
-	return matImage;
-}
 
 
 void ADesktopGameModeBase::ScreensToCVMats()

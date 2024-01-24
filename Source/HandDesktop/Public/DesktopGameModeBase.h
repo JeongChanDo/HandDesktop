@@ -28,17 +28,8 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
-	cv::VideoCapture capture;
-	cv::Mat image;
-
 	UFUNCTION(BlueprintCallable)
 	void ReadFrame();
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UTexture2D* imageTexture;
-	void MatToTexture2D(const cv::Mat InMat);
-
-	cv::Mat GetScreenToCVMat();
 
 
 
@@ -57,4 +48,16 @@ public:
 
 	void ScreensToCVMats();
 	void CVMatsToTextures();
+
+
+
+	int webcamWidth = 1280;
+	int webcamHeight = 720;
+
+	cv::VideoCapture capture;
+	cv::Mat webcamImage;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UTexture2D* webcamTexture;
+	void MatToTexture2D(const cv::Mat InMat);
+
 };
