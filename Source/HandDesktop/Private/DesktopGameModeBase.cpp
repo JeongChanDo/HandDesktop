@@ -1,15 +1,14 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "DesktopGameModeBase.h"
 
 
 void ADesktopGameModeBase::BeginPlay()
 {
 	Super::BeginPlay();
+	blaze = Blaze();
 
 	capture = cv::VideoCapture(1);
-
 	if (!capture.isOpened())
 	{
 		UE_LOG(LogTemp, Log, TEXT("Open Webcam failed"));
@@ -19,6 +18,10 @@ void ADesktopGameModeBase::BeginPlay()
 	{
 		UE_LOG(LogTemp, Log, TEXT("Open Webcam Success"));
 	}
+	capture.set(cv::CAP_PROP_FRAME_WIDTH, webcamWidth);
+	capture.set(cv::CAP_PROP_FRAME_HEIGHT, webcamHeight);
+
+
 	webcamTexture = UTexture2D::CreateTransient(monitorWidth, monitorHeight, PF_B8G8R8A8);
 
 
@@ -34,16 +37,44 @@ void ADesktopGameModeBase::BeginPlay()
 
 void ADesktopGameModeBase::ReadFrame()
 {
-
 	if (!capture.isOpened())
 	{
 		return;
 	}
 	capture.read(webcamImage);
+
+	blaze.ResizeAndPad(webcamImage, img256, img128, scale, pad);
+	//UE_LOG(LogTemp, Log, TEXT("scale value: %f, pad value: (%f, %f)"), scale, pad[0], pad[1]);
+	std::vector<Blaze::PalmDetection> normDets = blaze.PredictPalmDetections(img128);
+	std::vector<Blaze::PalmDetection> denormDets = blaze.DenormalizePalmDetections(normDets, webcamWidth, webcamHeight, pad);
+	blaze.DrawPalmDetections(webcamImage, denormDets);
+
+	std::string dets_size_str = "norm dets : " + std::to_string(normDets.size()) + ", denorm dets : " + std::to_string(denormDets.size());
+	cv::putText(webcamImage, dets_size_str, cv::Point(30, 30), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(255, 0, 0), 2);
+	int i = 1;
+	for (auto& det : denormDets)
+	{
+
+		std::ostringstream oss;
+		oss << "denorm dets : (" << det.xmin << ", " << det.ymin << "),(" <<
+			det.xmax << ", " << det.ymax << ")";
+		std::string det_str = oss.str();
+		cv::putText(webcamImage, det_str, cv::Point(30, 30 + 20 * i), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 2);
+		i++;
+	}
+	/*
+	blaze.DrawPalmDetections(img128, normDets);
+	cv::Mat roi1 = webcamImage(cv::Rect(1000, 500, img128.cols, img128.rows));
+	img128.copyTo(roi1);
+	*/
+
+
 	MatToTexture2D(webcamImage);
 
 
-
+	/*
+	모니터 시각화
+	*/
 	ScreensToCVMats();
 	CVMatsToTextures();
 }
@@ -58,10 +89,6 @@ void ADesktopGameModeBase::MatToTexture2D(const cv::Mat InMat)
 		cv::Mat bgraImage;
 		//if the Mat is in BGR space, convert it to BGRA. There is no three channel texture in UE (at least with eight bit)
 		cv::cvtColor(resizedImage, bgraImage, cv::COLOR_BGR2BGRA);
-
-		//Texture->SRGB = 0;//set to 0 if Mat is not in srgb (which is likely when coming from a webcam)
-		//other settings of the texture can also be changed here
-		//Texture->UpdateResource();
 
 		//actually copy the data to the new texture
 		FTexture2DMipMap& Mip = webcamTexture->GetPlatformData()->Mips[0];
@@ -158,6 +185,7 @@ void ADesktopGameModeBase::CVMatsToTextures()
 
 
 	}
-
-
 }
+
+
+

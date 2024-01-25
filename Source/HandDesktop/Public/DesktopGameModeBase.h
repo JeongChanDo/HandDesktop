@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "Blaze.h"
 
 #include "Windows/AllowWindowsPlatformTypes.h"
 #include <Windows.h>
@@ -51,13 +52,21 @@ public:
 
 
 
-	int webcamWidth = 1280;
-	int webcamHeight = 720;
+	int webcamWidth = 640;
+	int webcamHeight = 480;
 
 	cv::VideoCapture capture;
 	cv::Mat webcamImage;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	UTexture2D* webcamTexture;
 	void MatToTexture2D(const cv::Mat InMat);
+
+
+	//var and functions with blaze
+	Blaze blaze;
+	cv::Mat img256;
+	cv::Mat img128;
+	float scale;
+	cv::Scalar pad;
 
 };
