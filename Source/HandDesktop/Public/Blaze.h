@@ -1,7 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
-
 #include "PreOpenCVHeaders.h"
 #include <opencv2/opencv.hpp>
 #include "PostOpenCVHeaders.h"
@@ -38,6 +37,10 @@ public:
 		cv::Point2d kp_arr[7];
 		float score;
 	};
+	struct BoxROI {
+		cv::Point2f pts[4];
+	};
+
 
 	int blazePalmSize = 128;
 	float palmMinScoreThresh = 0.4;
@@ -50,5 +53,21 @@ public:
 	float sigmoid(float x);
 	std::vector<PalmDetection> DenormalizePalmDetections(std::vector<PalmDetection> detections, int width, int height, cv::Scalar pad);
 	void DrawPalmDetections(cv::Mat& img, std::vector<Blaze::PalmDetection> denormDets);
+	std::vector<PalmDetection> FilteringDets(std::vector<PalmDetection> detections, int width, int height);
 
+
+	//var and func for blazehand
+	void Detections2ROI(std::vector<Blaze::PalmDetection> dets,
+		std::vector<float>& vec_xc, std::vector<float>& vec_yc,
+		std::vector<float>& vec_scale, std::vector<float>& vec_theta
+	);
+	float blazePalmDy = -0.5;
+	float blazePalmDScale = 2.6;
+	float blazePalmTheta0 = CV_PI / 2;
+
+	void extract_roi(cv::Mat frame, std::vector<float>& vec_xc, std::vector<float>& vec_yc,
+		std::vector<float>& vec_scale, std::vector<float>& vec_theta, std::vector<PalmDetection> denormDets,
+		std::vector<cv::Mat>& imgs, std::vector<cv::Mat>& affines, std::vector<BoxROI>& boxROIs);
+
+	int blazeHandSize = 256;
 };
