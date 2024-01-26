@@ -309,11 +309,6 @@ void Blaze::extract_roi(cv::Mat frame, std::vector<float>& vec_xc, std::vector<f
             cv::Point2f(denormDet.xmin, denormDet.ymax)
         };
 
-        Blaze::BoxROI roi;
-        for (int j = 0; j < 4; j++)
-            roi.pts[j] = originaDetPoints[j];
-
-
         // 회전된 상자의 꼭지점 계산
         cv::Point2f startRotatedPoints[4];
 
@@ -326,6 +321,8 @@ void Blaze::extract_roi(cv::Mat frame, std::vector<float>& vec_xc, std::vector<f
 
         };
 
+
+        Blaze::BoxROI roi;
         for (int j = 0; j < 4; j++)
         {
             cv::Point2f startRotatedPoint = originaDetPoints[j] - center;
@@ -334,7 +331,11 @@ void Blaze::extract_roi(cv::Mat frame, std::vector<float>& vec_xc, std::vector<f
             x = x * scale;
             y = y * scale;
             startRotatedPoints[j] = cv::Point2f(x, y) + center;
+
+            roi.pts[j] = startRotatedPoints[j];
         }
+
+
 
         // 어파인 변환 행렬 계산
         cv::Mat affineTransform_Mat = cv::getAffineTransform(startRotatedPoints, targetRotatedPoint);
@@ -377,5 +378,17 @@ void Blaze::extract_roi(cv::Mat frame, std::vector<float>& vec_xc, std::vector<f
         vec_img.push_back(affine_img);
         vec_affine.push_back(inv_affine_tranform_Mat);
         vec_boxROI.push_back(roi);
+    }
+}
+
+
+void Blaze::DrawROI(cv::Mat& frame, std::vector<Blaze::BoxROI> vec_box)
+{
+    for (auto& roi : vec_box)
+    {
+        cv::line(frame, roi.pts[0], roi.pts[1], cv::Scalar(125, 0, 0), 2);
+        cv::line(frame, roi.pts[1], roi.pts[2], cv::Scalar(125, 0, 0), 2);
+        cv::line(frame, roi.pts[2], roi.pts[3], cv::Scalar(125, 0, 0), 2);
+        cv::line(frame, roi.pts[3], roi.pts[0], cv::Scalar(125, 0, 0), 2);
     }
 }

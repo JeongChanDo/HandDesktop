@@ -62,7 +62,7 @@ public:
 		std::vector<float>& vec_scale, std::vector<float>& vec_theta
 	);
 	float blazePalmDy = -0.5;
-	float blazePalmDScale = 2.6;
+	float blazePalmDScale = 3;
 	float blazePalmTheta0 = CV_PI / 2;
 
 	void extract_roi(cv::Mat frame, std::vector<float>& vec_xc, std::vector<float>& vec_yc,
@@ -70,4 +70,6 @@ public:
 		std::vector<cv::Mat>& imgs, std::vector<cv::Mat>& affines, std::vector<BoxROI>& boxROIs);
 
 	int blazeHandSize = 256;
+
+	void DrawROI(cv::Mat& frame, std::vector<BoxROI> vec_box);
 };

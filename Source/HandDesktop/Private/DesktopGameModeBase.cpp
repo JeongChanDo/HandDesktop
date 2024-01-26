@@ -114,15 +114,14 @@ void ADesktopGameModeBase::ReadFrame()
 	{
 		cv::Mat tmp = vec_img.at(i);
 		cv::resize(tmp, tmp, cv::Size(100, 100));
-		cv::Mat roi = webcamImage(cv::Rect(400 + (i * 100), 300, 100, 100));
+		cv::Mat roi = webcamImage(cv::Rect(500 + (i * 100), 350, 100, 100));
 		tmp.copyTo(roi);
 	}
 
-	/*
-	blaze.DrawPalmDetections(img128, normDets);
-	cv::Mat roi1 = webcamImage(cv::Rect(1000, 500, img128.cols, img128.rows));
-	img128.copyTo(roi1);
-	*/
+
+	blaze.DrawROI(webcamImage, vec_boxROI);
+
+
 
 
 	MatToTexture2D(webcamImage);
@@ -242,6 +241,3 @@ void ADesktopGameModeBase::CVMatsToTextures()
 
 	}
 }
-
-
-
