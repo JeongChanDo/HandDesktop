@@ -15,8 +15,8 @@ Blaze::~Blaze()
 
 
 void Blaze::ResizeAndPad(
-	cv::Mat& srcimg, cv::Mat& img256,
-	cv::Mat& img128, float& scale, cv::Scalar& pad
+    cv::Mat& srcimg, cv::Mat& img256,
+    cv::Mat& img128, float& scale, cv::Scalar& pad
 )
 {
     float h1, w1;
@@ -46,20 +46,13 @@ void Blaze::ResizeAndPad(
     int padw2 = static_cast<int>(padw / 2) + static_cast<int>(padw % 2);
     pad = cv::Scalar(static_cast<float>(padh1 * scale), static_cast<float>(padw1 * scale));
 
-    
+
     cv::resize(srcimg, img256, cv::Size(w1, h1));
     cv::copyMakeBorder(img256, img256, padh1, padh2, padw1, padw2, cv::BORDER_CONSTANT, cv::Scalar(0, 0, 0));
+
     cv::resize(img256, img128, cv::Size(128, 128));
-
-    /*
-    // img256을 srcimg의 (0, 0) 좌표에 그리기
-    cv::Mat roi1 = srcimg(cv::Rect(0, 0, img256.cols, img256.rows));
-    img256.copyTo(roi1);
-
-    // img128를 srcimg의 (300, 0) 좌표에 그리기
-    cv::Mat roi2 = srcimg(cv::Rect(300, 0, img128.cols, img128.rows));
-    img128.copyTo(roi2);
-    */
+    cv::cvtColor(img256, img256, cv::COLOR_BGR2RGB);
+    cv::cvtColor(img128, img128, cv::COLOR_BGR2RGB);
 }
 
 
@@ -73,11 +66,9 @@ std::vector<Blaze::PalmDetection> Blaze::PredictPalmDetections(cv::Mat& img)
     std::vector<cv::Rect> boundingBoxes;
 
 
-    cv::Mat inputImg;
-    cv::cvtColor(img, inputImg, cv::COLOR_BGR2RGB);
-
     cv::Mat tensor;
-    inputImg.convertTo(tensor, CV_32F, 1 / 127.5, -1.0);
+    img.convertTo(tensor, CV_32F);
+    tensor = tensor / 127.5 - 1;
     cv::Mat blob = cv::dnn::blobFromImage(tensor, 1.0, tensor.size(), 0, false, false, CV_32F);
     std::vector<cv::String> outNames(2);
     outNames[0] = "regressors";
@@ -99,8 +90,8 @@ std::vector<Blaze::PalmDetection> Blaze::PredictPalmDetections(cv::Mat& img)
                 {
                     beforeNMSResults.push_back(res);
 
-                    cv::Point2d startPt = cv::Point2d(res.xmin, res.ymin);
-                    cv::Point2d endPt = cv::Point2d(res.xmax, res.ymax);
+                    cv::Point2d startPt = cv::Point2d(res.xmin * blazePalmSize, res.ymin * blazePalmSize);
+                    cv::Point2d endPt = cv::Point2d(res.xmax * blazePalmSize, res.ymax * blazePalmSize);
 
                     boundingBoxes.push_back(cv::Rect(startPt, endPt));
                     scores.push_back(res.score);
@@ -116,8 +107,8 @@ std::vector<Blaze::PalmDetection> Blaze::PredictPalmDetections(cv::Mat& img)
                 if (res.score != 0)
                 {
                     beforeNMSResults.push_back(res);
-                    cv::Point2d startPt = cv::Point2d(res.xmin, res.ymin);
-                    cv::Point2d endPt = cv::Point2d(res.xmax, res.ymax);
+                    cv::Point2d startPt = cv::Point2d(res.xmin * blazePalmSize, res.ymin * blazePalmSize);
+                    cv::Point2d endPt = cv::Point2d(res.xmax * blazePalmSize, res.ymax * blazePalmSize);
 
                     boundingBoxes.push_back(cv::Rect(startPt, endPt));
                     scores.push_back(res.score);
@@ -160,7 +151,7 @@ Blaze::PalmDetection Blaze::GetPalmDetection(cv::Mat regressor, cv::Mat classifi
     res.ymax = (y + h) / blazePalmSize;
     res.xmax = (x + w) / blazePalmSize;
 
-    if ((res.ymin < 0) || (res.xmin < 0) || (res.xmax > 1) || (res.ymax > 1)) return res;
+    //if ((res.ymin < 0) || (res.xmin < 0) || (res.xmax > 1) || (res.ymax > 1)) return res;
 
     res.score = score;
 
@@ -246,149 +237,9 @@ std::vector<Blaze::PalmDetection> Blaze::FilteringDets(std::vector<Blaze::PalmDe
             continue;
         int w = denormDet.xmax - denormDet.xmin;
         int y = denormDet.ymax - denormDet.ymin;
-        if ((w * y < 50 * 40 )|| (w * y  > (width * 0.7) * (height * 0.7)))
+        if ((w * y < 40 * 40 )|| (w * y  > (width * 0.7) * (height * 0.7)))
             continue;
         filteredDets.push_back(denormDet);
     }
     return filteredDets;
-}
-
-
-void Blaze::Detections2ROI(std::vector<Blaze::PalmDetection> dets, std::vector<float>& vec_xc, std::vector<float>& vec_yc, std::vector<float>& vec_scale, std::vector<float>& vec_theta)
-{
-    for (int i = 0; i < dets.size(); i++)
-    {
-        Blaze::PalmDetection det = dets.at(i);
-        float xc = (det.xmax + det.xmin) / 2;
-        float yc = (det.ymax + det.ymin) / 2;
-        float scale = blazePalmDScale;
-        /*
-        float scale = (det.xmax - det.xmin); //assumes square box
-
-        yc = blazePalmDy * scale;
-        scale *= blazePalmDScale;
-        */
-
-        //compute box rot
-        float theta = std::atan2(det.kp_arr[0].y - det.kp_arr[1].y, det.kp_arr[0].x - det.kp_arr[1].x) - blazePalmTheta0;
-
-        vec_xc.push_back(xc);
-        vec_yc.push_back(yc);
-        vec_scale.push_back(scale);
-        vec_theta.push_back(theta);
-    }
-}
-
-
-void Blaze::extract_roi(cv::Mat frame, std::vector<float>& vec_xc, std::vector<float>& vec_yc, 
-    std::vector<float>& vec_scale, std::vector<float>& vec_theta, std::vector<Blaze::PalmDetection> denormDets,
-    std::vector<cv::Mat>& vec_img, std::vector<cv::Mat>& vec_affine, std::vector<BoxROI>& vec_boxROI)
-{
-    cv::Mat img = frame.clone();
-    for (int i = 0; i < vec_xc.size(); i++)
-    {
-        cv::Point2f center = cv::Point2f(vec_xc.at(i), vec_yc.at(i));
-
-        Blaze::PalmDetection denormDet = denormDets.at(i);
-        float theta = vec_theta.at(i);
-        theta = theta * 180 / CV_PI;
-        float scale = vec_scale.at(i);
-
-
-
-
-        // 회전 변환 행렬 계산
-        cv::Mat rotationMatrix = cv::getRotationMatrix2D(center, theta, 1.0);
-
-
-        // 원래 detection 꼭지점
-        cv::Point2f originaDetPoints[4] = {
-            cv::Point2f(denormDet.xmin, denormDet.ymin),
-            cv::Point2f(denormDet.xmax, denormDet.ymin),
-            cv::Point2f(denormDet.xmax, denormDet.ymax),
-            cv::Point2f(denormDet.xmin, denormDet.ymax)
-        };
-
-        // 회전된 상자의 꼭지점 계산
-        cv::Point2f startRotatedPoints[4];
-
-        // 목표 꼭지점(블라즈 핸드는 256이므로
-        cv::Point2f targetRotatedPoint[4] = {
-            cv::Point2f(0, 0),
-            cv::Point2f(256, 0),
-            cv::Point2f(256, 256),
-            cv::Point2f(0, 256)
-
-        };
-
-
-        Blaze::BoxROI roi;
-        for (int j = 0; j < 4; j++)
-        {
-            cv::Point2f startRotatedPoint = originaDetPoints[j] - center;
-            float x = startRotatedPoint.x * std::cos(theta * CV_PI / 180) - startRotatedPoint.y * std::sin(theta * CV_PI / 180);
-            float y = startRotatedPoint.x * std::sin(theta * CV_PI / 180) + startRotatedPoint.y * std::cos(theta * CV_PI / 180);
-            x = x * scale;
-            y = y * scale;
-            startRotatedPoints[j] = cv::Point2f(x, y) + center;
-
-            roi.pts[j] = startRotatedPoints[j];
-        }
-
-
-
-        // 어파인 변환 행렬 계산
-        cv::Mat affineTransform_Mat = cv::getAffineTransform(startRotatedPoints, targetRotatedPoint);
-        cv::Mat inv_affine_tranform_Mat;
-        cv::invertAffineTransform(affineTransform_Mat, inv_affine_tranform_Mat);
-
-        // 정 어파인변환 행렬로 이미지 변환
-        cv::Mat affine_img;
-        cv::warpAffine(img, affine_img, affineTransform_Mat, cv::Size(blazeHandSize, blazeHandSize));
-
-
-
-
-        /*
-
-        std::ostringstream oss_info;
-        oss_info << "center(" << center.x << "," << center.y << "), scale : " << scale;
-        std::string oss_info_str = oss_info.str();
-        cv::putText(frame, oss_info_str, cv::Point(30, 370), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 255), 2);
-
-
-
-        std::ostringstream oss_originaDetPoints;
-        oss_originaDetPoints << "originaDetPoints pt0(" << originaDetPoints[0].x << "," << originaDetPoints[0].y << ")"
-                << ", pt1(" << originaDetPoints[1].x << ", " << originaDetPoints[1].y << ")";
-        std::string originaDetPoints_str = oss_originaDetPoints.str();
-        cv::putText(frame, originaDetPoints_str, cv::Point(30, 400), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 255), 2);
-
-        std::ostringstream oss_startRotatedPoints;
-        oss_startRotatedPoints << "startRotatedPoint pt0(" << startRotatedPoints[0].x << "," << startRotatedPoints[0].y<<")"
-            << ", pt1(" << startRotatedPoints[1].x << ", " << startRotatedPoints[1].y << ")";
-
-        std::string startRotatedPoints_str = oss_startRotatedPoints.str();
-        cv::putText(frame, startRotatedPoints_str, cv::Point(30, 420), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 255), 2);
-        */
-
-
-
-
-        vec_img.push_back(affine_img);
-        vec_affine.push_back(inv_affine_tranform_Mat);
-        vec_boxROI.push_back(roi);
-    }
-}
-
-
-void Blaze::DrawROI(cv::Mat& frame, std::vector<Blaze::BoxROI> vec_box)
-{
-    for (auto& roi : vec_box)
-    {
-        cv::line(frame, roi.pts[0], roi.pts[1], cv::Scalar(125, 0, 0), 2);
-        cv::line(frame, roi.pts[1], roi.pts[2], cv::Scalar(125, 0, 0), 2);
-        cv::line(frame, roi.pts[2], roi.pts[3], cv::Scalar(125, 0, 0), 2);
-        cv::line(frame, roi.pts[3], roi.pts[0], cv::Scalar(125, 0, 0), 2);
-    }
 }

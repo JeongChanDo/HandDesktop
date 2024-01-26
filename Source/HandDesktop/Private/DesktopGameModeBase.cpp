@@ -8,7 +8,7 @@ void ADesktopGameModeBase::BeginPlay()
 	Super::BeginPlay();
 	blaze = Blaze();
 
-	capture = cv::VideoCapture(1);
+	capture = cv::VideoCapture(0);
 	if (!capture.isOpened())
 	{
 		UE_LOG(LogTemp, Log, TEXT("Open Webcam failed"));
@@ -54,76 +54,28 @@ void ADesktopGameModeBase::ReadFrame()
 
 
 
-	/*
-	get affined hand img, affine mat, ROI
-	*/
-	std::vector<float> vec_xc;
-	std::vector<float> vec_yc;
-	std::vector<float> vec_scale;
-	std::vector<float> vec_theta;
-	blaze.Detections2ROI(filteredDets, vec_xc, vec_yc, vec_scale, vec_theta);
-
-
-	std::vector<cv::Mat> vec_img;
-	std::vector<cv::Mat> vec_affine;
-	std::vector<Blaze::BoxROI> vec_boxROI;
-
-	blaze.extract_roi(webcamImage, vec_xc, vec_yc,
-		vec_scale, vec_theta, filteredDets,
-		vec_img, vec_affine, vec_boxROI);
-
-
-	/*
-	Draw
-	*/
-	blaze.DrawPalmDetections(webcamImage, filteredDets);
 
 	std::string dets_size_str = "filtered dets : " + std::to_string(filteredDets.size()) + ", norm dets : " + std::to_string(normDets.size()) + ", denorm dets : " + std::to_string(denormDets.size());
 	cv::putText(webcamImage, dets_size_str, cv::Point(30, 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 2);
+
+
 
 	for (int i = 0; i < filteredDets.size(); i++)
 	{
 		auto& det = filteredDets.at(i);
 
-
 		std::ostringstream oss;
-		oss << "denorm dets : (" << det.xmin << ", " << det.ymin << "),(" <<
-			det.xmax << ", " << det.ymax << "), center : " << vec_xc.at(i) <<","<<vec_yc.at(i);
+		oss << "filteredDets : (" << det.xmin << ", " << det.ymin << "),(" <<
+			det.xmax << ", " << det.ymax << ")";
 		std::string det_str = oss.str();
-		cv::putText(webcamImage, det_str, cv::Point(30, 50 + 20 * i), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 2);
+		cv::putText(webcamImage, det_str, cv::Point(30, 50 + 20 * i), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(0, 0, 255), 2);
 	}
 
 
 
-	std::ostringstream oss_vec;
-	oss_vec << "vec_xc : " << vec_xc.size() << ", vec_scale : " << vec_scale.size() << ", vec_theta" << vec_theta.size();
-	std::string oss_vec_str = oss_vec.str();
-	cv::putText(webcamImage, oss_vec_str, cv::Point(30, 450), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 2);
 
 
-
-	std::ostringstream oss_mat;
-	oss_mat << "vec_img : " << vec_img.size() << ", vec_affine : " << vec_affine.size() << ", vec_boxROI" << vec_boxROI.size();
-	std::string oss_mat_str = oss_mat.str();
-	cv::putText(webcamImage, oss_mat_str, cv::Point(30, 465), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(0, 0, 255), 2);
-
-
-
-
-	for (int i = 0; i < vec_img.size(); i++)
-	{
-		cv::Mat tmp = vec_img.at(i);
-		cv::resize(tmp, tmp, cv::Size(100, 100));
-		cv::Mat roi = webcamImage(cv::Rect(500 + (i * 100), 350, 100, 100));
-		tmp.copyTo(roi);
-	}
-
-
-	blaze.DrawROI(webcamImage, vec_boxROI);
-
-
-
-
+	blaze.DrawPalmDetections(webcamImage, filteredDets);
 	MatToTexture2D(webcamImage);
 
 

@@ -69,4 +69,5 @@ public:
 	float scale;
 	cv::Scalar pad;
 
+
 };
