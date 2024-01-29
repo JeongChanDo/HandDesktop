@@ -224,6 +224,28 @@ void Blaze::DrawPalmDetections(cv::Mat& img, std::vector<Blaze::PalmDetection> d
     }
 }
 
+void Blaze::DrawDetsInfo(cv::Mat& img, std::vector<Blaze::PalmDetection> filteredDets, std::vector<Blaze::PalmDetection> normDets, std::vector<Blaze::PalmDetection> denormDets)
+{
+    //puttext num of filtered/denorm dets
+    std::string dets_size_str = "filtered dets : " + std::to_string(filteredDets.size()) + ", norm dets : " + std::to_string(normDets.size()) + ", denorm dets : " + std::to_string(denormDets.size());
+    cv::putText(img, dets_size_str, cv::Point(30, 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 2);
+
+    for (int i = 0; i < filteredDets.size(); i++)
+    {
+        auto& det = filteredDets.at(i);
+
+        std::ostringstream oss;
+        oss << "filteredDets : (" << det.xmin << ", " << det.ymin << "),(" <<
+            det.xmax << ", " << det.ymax << ")";
+        std::string det_str = oss.str();
+        cv::putText(img, det_str, cv::Point(30, 50 + 20 * i), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(0, 0, 255), 2);
+    }
+
+}
+
+
+
+
 std::vector<Blaze::PalmDetection> Blaze::FilteringDets(std::vector<Blaze::PalmDetection> detections, int width, int height)
 {
     std::vector<Blaze::PalmDetection> filteredDets;
@@ -242,4 +264,165 @@ std::vector<Blaze::PalmDetection> Blaze::FilteringDets(std::vector<Blaze::PalmDe
         filteredDets.push_back(denormDet);
     }
     return filteredDets;
+}
+
+
+
+
+
+
+
+std::vector<cv::Rect> Blaze::convertHandRects(std::vector<PalmDetection> filteredDets)
+{
+    std::vector<cv::Rect> handRects;
+    for (auto& det : filteredDets)
+    {
+        int width = det.xmax - det.xmin; 
+        int height = det.ymax - det.ymin;
+        int large_length = 0;
+
+        int center_x = static_cast<int>((det.xmax + det.xmin) / 2);
+        int center_y = static_cast<int>((det.ymax + det.ymin) / 2);
+
+        if (width > height)
+            large_length = height * blazeHandDScale;
+        else
+            large_length = height * blazeHandDScale;
+
+        int start_x = center_x - static_cast<int>(large_length / 2);
+        int start_y = center_y - static_cast<int>(large_length / 2) - large_length * 0.1;
+
+        int end_x = center_x + static_cast<int>(large_length / 2);
+        int end_y = center_y + static_cast<int>(large_length / 2) - large_length * 0.1;
+
+
+        start_x = std::max(start_x, 0);
+        start_y = std::max(start_y, 0);
+        end_x = std::min(end_x, webcamWidth);
+        end_y = std::min(end_y, webcamHeight);
+
+        cv::Point2d startPt = cv::Point2d(start_x, start_y);
+        cv::Point2d endPt = cv::Point2d(end_x, end_y);
+
+        cv::Rect handRect(startPt, endPt);
+        handRects.push_back(handRect);
+    }
+
+    return handRects;
+}
+
+void Blaze::DrawRects(cv::Mat& img, std::vector<cv::Rect> rects)
+{
+    for (auto& rect : rects)
+    {
+        cv::rectangle(img, rect, cv::Scalar(255, 255, 255), 1);
+    }
+}
+
+void Blaze::GetHandImages(cv::Mat& img, std::vector<cv::Rect> rects, std::vector<cv::Mat>& handImgs)
+{
+    for (auto& rect : rects)
+    {
+
+        //std::cout << "img size : " << img.size() << ", rect : " << rect << std::endl;
+
+        //cv::Mat roi(cv::Size(rect.width, rect.height), img.type(), cv::Scalar(0, 0, 0))
+
+        cv::Mat roi = img(rect).clone();
+        cv::cvtColor(roi, roi, cv::COLOR_BGR2RGB);
+        cv::resize(roi, roi, cv::Size(blazeHandSize, blazeHandSize));
+        handImgs.push_back(roi);
+    }
+}
+
+
+
+std::vector<cv::Mat> Blaze::PredictHandDetections(std::vector<cv::Mat>& imgs)
+{
+    std::vector<cv::Mat> imgs_landmarks;
+
+
+    for (auto& img : imgs)
+    {
+        cv::Mat tensor;
+        img.convertTo(tensor, CV_32F);
+        tensor = tensor / blazeHandSize;
+        cv::Mat blob = cv::dnn::blobFromImage(tensor, 1.0, tensor.size(), 0, false, false, CV_32F);
+        std::vector<cv::String> outNames(3);
+        outNames[0] = "hand_flag";
+        outNames[1] = "handedness";
+        outNames[2] = "landmarks";
+
+
+
+        blazeHand.setInput(blob);
+        std::vector<cv::Mat> outputs;
+        blazeHand.forward(outputs, outNames);
+
+        cv::Mat handflag = outputs[0];
+        cv::Mat handedness = outputs[1];
+        cv::Mat landmarks = outputs[2];
+
+
+        imgs_landmarks.push_back(landmarks);
+    }
+    return imgs_landmarks;
+}
+
+std::vector<cv::Mat> Blaze::DenormalizeHandLandmarks(std::vector<cv::Mat> imgs_landmarks, std::vector<cv::Rect> rects)
+{
+    std::vector<cv::Mat> denorm_imgs_landmarks;
+
+    for (int i = 0; i < imgs_landmarks.size(); i++)
+    {
+        cv::Mat landmarks = imgs_landmarks.at(i);
+        cv::Rect rect = rects.at(i);
+        cv::Mat squeezed = landmarks.reshape(0, landmarks.size[1]);
+
+        //std::cout << "squeezed size: " << squeezed.size[0] << "," << squeezed.size[1] << std::endl;
+
+        for (int j = 0; j < squeezed.size[0]; j++)
+        {
+            squeezed.at<float>(j, 0) = squeezed.at<float>(j, 0) * rect.width + rect.x;
+            squeezed.at<float>(j, 1) = squeezed.at<float>(j, 1) * rect.height + rect.y;
+            squeezed.at<float>(j, 2) = squeezed.at<float>(j, 2) * rect.height * -1;
+
+
+        }
+        denorm_imgs_landmarks.push_back(squeezed);
+    }
+
+    //std::cout << std::endl;
+    return denorm_imgs_landmarks;
+}
+
+void Blaze::DrawHandDetections(cv::Mat img, std::vector<cv::Mat> denorm_imgs_landmarks)
+{
+    for (auto& denorm_landmarks : denorm_imgs_landmarks)
+    {
+        for (int i = 0; i < denorm_landmarks.size[0]; i++)
+        {
+            float x = denorm_landmarks.at<float>(i, 0);
+            float y = denorm_landmarks.at<float>(i, 1);
+
+            cv::Point pt(x, y);
+
+            cv::circle(img, pt, 5, cv::Scalar(0, 255, 0), -1);
+
+        }
+
+        for (auto& connection : HAND_CONNECTIONS)
+        {
+            int startPtIdx = connection[0];
+            int endPtIdx = connection[1];
+
+            float startPtX = denorm_landmarks.at<float>(startPtIdx, 0);
+            float startPtY = denorm_landmarks.at<float>(startPtIdx, 1);
+            float endPtX = denorm_landmarks.at<float>(endPtIdx, 0);
+            float endPtY = denorm_landmarks.at<float>(endPtIdx, 1);
+            cv::line(img, cv::Point(startPtX, startPtY), cv::Point(endPtX, endPtY), cv::Scalar(255, 255, 255), 3);
+
+
+        }
+    }
 }

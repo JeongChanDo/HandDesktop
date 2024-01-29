@@ -55,27 +55,22 @@ void ADesktopGameModeBase::ReadFrame()
 
 
 
-	std::string dets_size_str = "filtered dets : " + std::to_string(filteredDets.size()) + ", norm dets : " + std::to_string(normDets.size()) + ", denorm dets : " + std::to_string(denormDets.size());
-	cv::putText(webcamImage, dets_size_str, cv::Point(30, 30), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 0, 0), 2);
+
+	std::vector<cv::Rect> handRects = blaze.convertHandRects(filteredDets);
+	std::vector<cv::Mat> handImgs;
+	blaze.GetHandImages(webcamImage, handRects, handImgs);
+	std::vector<cv::Mat> imgs_landmarks = blaze.PredictHandDetections(handImgs);
+	std::vector<cv::Mat> denorm_imgs_landmarks = blaze.DenormalizeHandLandmarks(imgs_landmarks, handRects);
 
 
 
-	for (int i = 0; i < filteredDets.size(); i++)
-	{
-		auto& det = filteredDets.at(i);
-
-		std::ostringstream oss;
-		oss << "filteredDets : (" << det.xmin << ", " << det.ymin << "),(" <<
-			det.xmax << ", " << det.ymax << ")";
-		std::string det_str = oss.str();
-		cv::putText(webcamImage, det_str, cv::Point(30, 50 + 20 * i), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(0, 0, 255), 2);
-	}
-
-
-
-
-
+	//draw hand rects/ plam detection/ dets info/ hand detection
+	blaze.DrawRects(webcamImage, handRects);
 	blaze.DrawPalmDetections(webcamImage, filteredDets);
+	blaze.DrawDetsInfo(webcamImage, filteredDets, normDets, denormDets);
+	blaze.DrawHandDetections(webcamImage, denorm_imgs_landmarks);
+
+	//cv::mat to utexture2d
 	MatToTexture2D(webcamImage);
 
 
