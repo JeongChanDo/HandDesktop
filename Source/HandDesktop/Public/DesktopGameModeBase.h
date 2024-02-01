@@ -2,6 +2,7 @@
 
 #pragma once
 
+
 #include "Blaze.h"
 
 #include "Windows/AllowWindowsPlatformTypes.h"
@@ -68,6 +69,30 @@ public:
 	cv::Mat img128;
 	float scale;
 	cv::Scalar pad;
+
+
+
+
+
+	// vars and funcs for rotator
+	int hand_conns_indexes[14] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+	//void get_pitch_yaw(cv::Point3f pt_start, cv::Point3f pt_end, float& pitch, float& yaw);
+	void calculateRotation(const cv::Point3f& pt1, const cv::Point3f& pt2, float& roll, float& pitch, float& yaw);
+
+	void make_map_for_rotators(std::vector<cv::Mat> denorm_imgs_landmarks);
+	void make_map_bone();
+
+	UPROPERTY(BlueprintReadWrite, Category = "RotatorMap")
+	TMap<int32, float> MapRoll;
+	UPROPERTY(BlueprintReadWrite, Category="RotatorMap")
+	TMap<int32, float> MapPitch;
+	UPROPERTY(BlueprintReadWrite, Category = "RotatorMap")
+	TMap<int32, float> MapYaw;
+
+	UPROPERTY(BlueprintReadWrite, Category = "RotatorMap")
+	TMap<int32, FString> MapBoneLeft;
+	UPROPERTY(BlueprintReadWrite, Category = "RotatorMap")
+	TMap<int32, FString> MapBoneRight;
 
 
 };

@@ -31,7 +31,8 @@ void ADesktopGameModeBase::BeginPlay()
 	imageTextureScreen1 = UTexture2D::CreateTransient(monitorWidth, monitorHeight, PF_B8G8R8A8);
 	imageTextureScreen2 = UTexture2D::CreateTransient(monitorWidth, monitorHeight, PF_B8G8R8A8);
 	imageTextureScreen3 = UTexture2D::CreateTransient(monitorWidth, monitorHeight, PF_B8G8R8A8);
-
+	
+	make_map_bone();
 }
 
 
@@ -61,6 +62,8 @@ void ADesktopGameModeBase::ReadFrame()
 	blaze.GetHandImages(webcamImage, handRects, handImgs);
 	std::vector<cv::Mat> imgs_landmarks = blaze.PredictHandDetections(handImgs);
 	std::vector<cv::Mat> denorm_imgs_landmarks = blaze.DenormalizeHandLandmarks(imgs_landmarks, handRects);
+
+	make_map_for_rotators(denorm_imgs_landmarks);
 
 
 
@@ -187,4 +190,114 @@ void ADesktopGameModeBase::CVMatsToTextures()
 
 
 	}
+}
+
+
+
+
+/*
+void ADesktopGameModeBase::get_pitch_yaw(cv::Point3f pt_start, cv::Point3f pt_end, float& pitch, float& yaw) {
+	float dx = pt_end.x - pt_start.x;
+	float dy = pt_end.y - pt_start.y;
+	dy *= -1;
+	yaw = std::atan2(dy, dx) * 180 / CV_PI;
+	yaw = yaw - 90;
+
+	float dz = pt_end.z - pt_start.z;
+	float xy_norm = std::sqrt(dx * dx + dy * dy);
+	pitch = std::atan2(dz, xy_norm) * 180 / CV_PI;
+	pitch *= -1;
+}
+*/
+
+void ADesktopGameModeBase::calculateRotation(const cv::Point3f& pt1, const cv::Point3f& pt2, float& roll, float& pitch, float& yaw) {
+	cv::Point3f vec = pt2 - pt1;  // 두 벡터를 연결하는 벡터 계산
+
+	roll = atan2(vec.y, vec.x) * 180 / CV_PI;  // 롤(Roll) 회전 계산
+	pitch = asin(vec.z / cv::norm(vec)) * 180 / CV_PI;  // 피치(Pitch) 회전 계산
+
+	cv::Point2f vecXY(vec.x, vec.y);  // xy 평면으로 투영
+	yaw = (atan2(vec.y, vec.x) - atan2(vec.z, cv::norm(vecXY))) * 180 / CV_PI;  // 요(Yaw) 회전 계산
+}
+
+
+
+
+void ADesktopGameModeBase::make_map_for_rotators(std::vector<cv::Mat> denorm_imgs_landmarks)
+{
+	for (auto& denorm_landmarks : denorm_imgs_landmarks)
+	{
+		std::vector<std::array<int, 2>> HAND_CONNECTIONS = blaze.HAND_CONNECTIONS;
+		for (auto& hand_conns_index : hand_conns_indexes)
+		{
+			std::array<int, 2> hand_conns = HAND_CONNECTIONS.at(hand_conns_index);
+			float roll, pitch, yaw;
+			cv::Point3f pt_start, pt_end;
+
+			pt_start.x = denorm_landmarks.at<float>(hand_conns.at(0), 0);
+			pt_start.y = denorm_landmarks.at<float>(hand_conns.at(0), 1);
+			pt_start.z = denorm_landmarks.at<float>(hand_conns.at(0), 2);
+
+			pt_end.x = denorm_landmarks.at<float>(hand_conns.at(1), 0);
+			pt_end.y = denorm_landmarks.at<float>(hand_conns.at(1), 1);
+			pt_end.z = denorm_landmarks.at<float>(hand_conns.at(1), 2);
+
+
+			calculateRotation(pt_start, pt_end, roll, pitch, yaw);
+
+			//get_pitch_yaw(pt_start, pt_end, pitch, yaw);
+			MapRoll.Add(hand_conns_index, roll);
+			MapPitch.Add(hand_conns_index, pitch);
+			MapYaw.Add(hand_conns_index, yaw);
+		}
+	}
+}
+
+
+/*
+	std::vector<std::array<int, 2>> HAND_CONNECTIONS = {
+	{0, 1}, {1, 2}, {2, 3}, {3, 4},
+	{5, 6}, {6, 7}, {7, 8},
+	{9, 10}, {10, 11}, {11, 12},
+	{13, 14}, {14, 15}, {15, 16},
+	{17, 18}, {18, 19}, {19, 20},
+	{0, 5}, {5, 9}, {9, 13}, {13, 17}, {0, 17}
+	};
+*/
+
+
+void ADesktopGameModeBase::make_map_bone()
+{
+	MapBoneLeft.Add(2, FString("b_l_thumb2"));
+	MapBoneLeft.Add(3, FString("b_l_thumb3"));
+	MapBoneLeft.Add(4, FString("b_l_index1"));
+	MapBoneLeft.Add(5, FString("b_l_index2"));
+	MapBoneLeft.Add(6, FString("b_l_index3"));
+	MapBoneLeft.Add(7, FString("b_l_middle1"));
+	MapBoneLeft.Add(8, FString("b_l_middle2"));
+	MapBoneLeft.Add(9, FString("b_l_middle3"));
+	MapBoneLeft.Add(10, FString("b_l_ring1"));
+	MapBoneLeft.Add(11, FString("b_l_ring2"));
+	MapBoneLeft.Add(12, FString("b_l_ring3"));
+	MapBoneLeft.Add(13, FString("b_l_pinky1"));
+	MapBoneLeft.Add(14, FString("b_l_pinky2"));
+	MapBoneLeft.Add(15, FString("b_l_pinky3"));
+
+
+	MapBoneRight.Add(2, FString("b_r_thumb2"));
+	MapBoneRight.Add(3, FString("b_r_thumb3"));
+	MapBoneRight.Add(4, FString("b_r_index1"));
+	MapBoneRight.Add(5, FString("b_r_index2"));
+	MapBoneRight.Add(6, FString("b_r_index3"));
+	MapBoneRight.Add(7, FString("b_r_middle1"));
+	MapBoneRight.Add(8, FString("b_r_middle2"));
+	MapBoneRight.Add(9, FString("b_r_middle3"));
+	MapBoneRight.Add(10, FString("b_r_ring1"));
+	MapBoneRight.Add(11, FString("b_r_ring2"));
+	MapBoneRight.Add(12, FString("b_r_ring3"));
+	MapBoneRight.Add(13, FString("b_r_pinky1"));
+	MapBoneRight.Add(14, FString("b_r_pinky2"));
+	MapBoneRight.Add(15, FString("b_r_pinky3"));
+
+
 }
