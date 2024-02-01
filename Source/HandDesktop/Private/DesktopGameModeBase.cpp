@@ -195,7 +195,7 @@ void ADesktopGameModeBase::CVMatsToTextures()
 
 
 
-/*
+
 void ADesktopGameModeBase::get_pitch_yaw(cv::Point3f pt_start, cv::Point3f pt_end, float& pitch, float& yaw) {
 	float dx = pt_end.x - pt_start.x;
 	float dy = pt_end.y - pt_start.y;
@@ -208,8 +208,8 @@ void ADesktopGameModeBase::get_pitch_yaw(cv::Point3f pt_start, cv::Point3f pt_en
 	pitch = std::atan2(dz, xy_norm) * 180 / CV_PI;
 	pitch *= -1;
 }
-*/
 
+/*
 void ADesktopGameModeBase::calculateRotation(const cv::Point3f& pt1, const cv::Point3f& pt2, float& roll, float& pitch, float& yaw) {
 	cv::Point3f vec = pt2 - pt1;  // 두 벡터를 연결하는 벡터 계산
 
@@ -219,7 +219,7 @@ void ADesktopGameModeBase::calculateRotation(const cv::Point3f& pt1, const cv::P
 	cv::Point2f vecXY(vec.x, vec.y);  // xy 평면으로 투영
 	yaw = (atan2(vec.y, vec.x) - atan2(vec.z, cv::norm(vecXY))) * 180 / CV_PI;  // 요(Yaw) 회전 계산
 }
-
+*/
 
 
 
@@ -243,13 +243,17 @@ void ADesktopGameModeBase::make_map_for_rotators(std::vector<cv::Mat> denorm_img
 			pt_end.z = denorm_landmarks.at<float>(hand_conns.at(1), 2);
 
 
-			calculateRotation(pt_start, pt_end, roll, pitch, yaw);
+			//calculateRotation(pt_start, pt_end, roll, pitch, yaw);
 
-			//get_pitch_yaw(pt_start, pt_end, pitch, yaw);
+			get_pitch_yaw(pt_start, pt_end, pitch, yaw);
 			MapRoll.Add(hand_conns_index, roll);
 			MapPitch.Add(hand_conns_index, pitch);
 			MapYaw.Add(hand_conns_index, yaw);
+
 		}
+		HandLeftX = denorm_landmarks.at<float>(9, 0);
+		HandLeftY = denorm_landmarks.at<float>(9, 1);
+
 	}
 }
 
@@ -300,4 +304,13 @@ void ADesktopGameModeBase::make_map_bone()
 	MapBoneRight.Add(15, FString("b_r_pinky3"));
 
 
+
+	MapBoneLeft.Add(16, FString("b_l_wrist"));
+	MapBoneLeft.Add(17, FString("b_l_thumb0"));
+	MapBoneLeft.Add(18, FString("b_l_thumb1"));
+	MapBoneLeft.Add(19, FString("b_l_pinky0"));
+	MapBoneRight.Add(16, FString("b_r_wrist"));
+	MapBoneRight.Add(17, FString("b_r_thumb0"));
+	MapBoneRight.Add(18, FString("b_r_thumb1"));
+	MapBoneRight.Add(19, FString("b_r_pinky0"));
 }
