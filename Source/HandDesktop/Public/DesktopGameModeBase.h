@@ -98,4 +98,28 @@ public:
 	float HandLeftX;
 	UPROPERTY(BlueprintReadWrite, Category = "HandCoord")
 	float HandLeftY;
+
+
+	// bone location
+	UPROPERTY(BlueprintReadWrite, Category = "LocationMap")
+	TMap<int32, FVector> MapBoneLocationLeft;
+	UPROPERTY(BlueprintReadWrite, Category = "LocationMap")
+	TMap<int32, FVector> MapBoneLocationRight;
+	void set_map_for_location();
+	void make_map_for_location();
+
+	UPROPERTY(BlueprintReadWrite, Category = "LocationMap")
+	TMap<int32, FString> MapBoneLocationNameLeft;
+	UPROPERTY(BlueprintReadWrite, Category = "LocationMap")
+	TMap<int32, FString> MapBoneLocationNameRight;
+
+	void make_map_bone_name();
+	void set_hand_pos_world();
+
+
+	UPROPERTY(BlueprintReadWrite, Category = "HandCoord")
+	float HandRightX;
+	UPROPERTY(BlueprintReadWrite, Category = "HandCoord")
+	float HandRightY;
+
 };

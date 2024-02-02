@@ -7,6 +7,7 @@ Blaze::Blaze()
 {
 	this->blazePalm = cv::dnn::readNet("c:/blazepalm_old.onnx");
 	this->blazeHand = cv::dnn::readNet("c:/blazehand.onnx");
+
 }
 
 Blaze::~Blaze()
@@ -387,7 +388,6 @@ std::vector<cv::Mat> Blaze::DenormalizeHandLandmarks(std::vector<cv::Mat> imgs_l
             squeezed.at<float>(j, 1) = squeezed.at<float>(j, 1) * rect.height + rect.y;
             squeezed.at<float>(j, 2) = squeezed.at<float>(j, 2) * rect.height * -1;
 
-
         }
         denorm_imgs_landmarks.push_back(squeezed);
     }
@@ -425,4 +425,91 @@ void Blaze::DrawHandDetections(cv::Mat img, std::vector<cv::Mat> denorm_imgs_lan
 
         }
     }
+}
+
+
+std::vector<cv::Mat> Blaze::DenormalizeHandLandmarksForBoneLocation(std::vector<cv::Mat> imgs_landmarks, std::vector<cv::Rect> rects)
+{
+
+    std::vector<cv::Mat> denorm_imgs_landmarks;
+
+  
+    for (int i = 0; i < imgs_landmarks.size(); i++)
+    {
+        /*
+        denrom lms for img drawing
+        */
+        cv::Mat landmarks = imgs_landmarks.at(i);
+        cv::Rect rect = rects.at(i);
+        cv::Mat squeezed_for_origin = landmarks.reshape(0, landmarks.size[1]).clone();
+
+        cv::Mat squeezed_for_img = landmarks.reshape(0, landmarks.size[1]).clone();
+
+        //std::cout << "squeezed size: " << squeezed.size[0] << "," << squeezed.size[1] << std::endl;
+
+        for (int j = 0; j < squeezed_for_img.size[0]; j++)
+        {
+            squeezed_for_img.at<float>(j, 0) = squeezed_for_img.at<float>(j, 0) * rect.width + rect.x;
+            squeezed_for_img.at<float>(j, 1) = squeezed_for_img.at<float>(j, 1) * rect.height + rect.y;
+            squeezed_for_img.at<float>(j, 2) = squeezed_for_img.at<float>(j, 2) * rect.height * -1;
+
+        }
+        denorm_imgs_landmarks.push_back(squeezed_for_img);
+
+
+
+
+        /*
+        denrom lms for bone location
+        */
+        cv::Mat squeezed_for_bone = landmarks.reshape(0, landmarks.size[1]).clone();
+
+        bool isLeft = IsLeftHand(squeezed_for_bone);
+
+
+        //UE_LOG(LogTemp, Log, TEXT("isLeft : %d"), isLeft);
+        //UE_LOG(LogTemp, Log, TEXT("squeezed_for_bone 4 xy : %f, %f"), squeezed_for_bone.at<float>(4, 0), squeezed_for_bone.at<float>(4, 1));
+        //UE_LOG(LogTemp, Log, TEXT("squeezed_for_bone 20 xy : %f, %f"), squeezed_for_bone.at<float>(20, 0), squeezed_for_bone.at<float>(20, 1));
+
+
+
+        if (isLeft)
+        {
+            for (int j = 0; j < squeezed_for_bone.size[0]; j++)
+            {
+                squeezed_for_bone.at<float>(j, 0) = (squeezed_for_origin.at<float>(j, 1) - squeezed_for_origin.at<float>(0, 1)) * skeletonXRatio * 2 * -1;
+                squeezed_for_bone.at<float>(j, 1) = (squeezed_for_origin.at<float>(j, 0) - 0.5) * skeletonYRatio * 2;
+                squeezed_for_bone.at<float>(j, 2) = squeezed_for_origin.at<float>(j, 2) * skeletonYRatio * 3 * -1;
+                //UE_LOG(LogTemp, Log, TEXT("squeezed_for_bone %d : %f, %f, %f"), j, squeezed_for_bone.at<float>(j, 1), squeezed_for_bone.at<float>(j, 2), squeezed_for_bone.at<float>(j, 3));
+
+            }
+            handLeft = squeezed_for_bone.clone();
+            handLeftImg = squeezed_for_img.clone();
+        }
+        else
+        {
+            for (int j = 0; j < squeezed_for_bone.size[0]; j++)
+            {
+                squeezed_for_bone.at<float>(j, 0) = (squeezed_for_origin.at<float>(j, 1) - squeezed_for_origin.at<float>(0, 1)) * skeletonXRatio * 2;
+                squeezed_for_bone.at<float>(j, 1) = (squeezed_for_origin.at<float>(j, 0) - 0.5) * skeletonYRatio * 2;
+                squeezed_for_bone.at<float>(j, 2) = squeezed_for_origin.at<float>(j, 2) * skeletonYRatio * 3;
+                //UE_LOG(LogTemp, Log, TEXT("squeezed_for_bone %d : %f, %f, %f"), j, squeezed_for_bone.at<float>(j, 1), squeezed_for_bone.at<float>(j, 2), squeezed_for_bone.at<float>(j, 3));
+            }
+
+            handRight = squeezed_for_bone.clone();
+            handRightImg = squeezed_for_img.clone();
+        }
+        //UE_LOG(LogTemp, Log, TEXT("handLeft rows : %d, cols : %d"), handLeft.size[0], handLeft.size[1]);
+    }
+
+    //std::cout << std::endl;
+    return denorm_imgs_landmarks;
+
+}
+
+bool Blaze::IsLeftHand(cv::Mat normalizedLandmarks)
+{
+    if (normalizedLandmarks.at<float>(4, 0) < normalizedLandmarks.at<float>(20, 0))
+        return true;
+    return false;
 }

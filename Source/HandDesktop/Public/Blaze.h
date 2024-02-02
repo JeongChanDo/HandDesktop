@@ -77,4 +77,18 @@ public:
 	std::vector<cv::Mat> PredictHandDetections(std::vector<cv::Mat>& imgs);
 	std::vector<cv::Mat> DenormalizeHandLandmarks(std::vector<cv::Mat> imgs_landmarks, std::vector<cv::Rect> rects);
 	void DrawHandDetections(cv::Mat img, std::vector<cv::Mat> denorm_imgs_landmarks);
+
+
+
+	// var, funs for left, right lms and bone location
+	float skeletonXRatio = 16.5;
+	float skeletonYRatio = 11.6;
+	cv::Mat handLeft;
+	cv::Mat handRight;
+	cv::Mat handLeftImg;
+	cv::Mat handRightImg;
+
+	std::vector<cv::Mat> DenormalizeHandLandmarksForBoneLocation(std::vector<cv::Mat> imgs_landmarks, std::vector<cv::Rect> rects);
+	bool IsLeftHand(cv::Mat normalizedLandmarks);
+
 };

@@ -33,6 +33,8 @@ void ADesktopGameModeBase::BeginPlay()
 	imageTextureScreen3 = UTexture2D::CreateTransient(monitorWidth, monitorHeight, PF_B8G8R8A8);
 	
 	make_map_bone();
+	make_map_for_location();
+	make_map_bone_name();
 }
 
 
@@ -61,11 +63,11 @@ void ADesktopGameModeBase::ReadFrame()
 	std::vector<cv::Mat> handImgs;
 	blaze.GetHandImages(webcamImage, handRects, handImgs);
 	std::vector<cv::Mat> imgs_landmarks = blaze.PredictHandDetections(handImgs);
-	std::vector<cv::Mat> denorm_imgs_landmarks = blaze.DenormalizeHandLandmarks(imgs_landmarks, handRects);
+	std::vector<cv::Mat> denorm_imgs_landmarks = blaze.DenormalizeHandLandmarksForBoneLocation(imgs_landmarks, handRects);
 
-	make_map_for_rotators(denorm_imgs_landmarks);
-
-
+	//make_map_for_rotators(denorm_imgs_landmarks);
+	set_map_for_location();
+	set_hand_pos_world();
 
 	//draw hand rects/ plam detection/ dets info/ hand detection
 	blaze.DrawRects(webcamImage, handRects);
@@ -313,4 +315,111 @@ void ADesktopGameModeBase::make_map_bone()
 	MapBoneRight.Add(17, FString("b_r_thumb0"));
 	MapBoneRight.Add(18, FString("b_r_thumb1"));
 	MapBoneRight.Add(19, FString("b_r_pinky0"));
+}
+
+
+
+
+
+void ADesktopGameModeBase::set_map_for_location()
+{
+	cv::Mat HandLeftLocMat = blaze.handLeft;
+	cv::Mat HandRightLocMat = blaze.handRight;
+
+
+	//UE_LOG(LogTemp, Log, TEXT("rows : %d, cols : %d"), HandLeftLocMat.size[0], HandLeftLocMat.size[1]);
+
+	for (int j = 0; j < HandLeftLocMat.size[0]; j++)
+	{
+		FVector vec(HandLeftLocMat.at<float>(j, 0), HandLeftLocMat.at<float>(j, 1), HandLeftLocMat.at<float>(j, 2));
+		MapBoneLocationLeft.Add(j, vec);
+
+	}
+	for (int j = 0; j < HandRightLocMat.size[0]; j++)
+	{
+		FVector vec(HandRightLocMat.at<float>(j, 0), HandRightLocMat.at<float>(j, 1), HandRightLocMat.at<float>(j, 2));
+		MapBoneLocationRight.Add(j, vec);
+	}
+	
+	//UE_LOG(LogTemp, Log, TEXT("HandRightLocMat.size[0] : %d"), HandRightLocMat.size[0]);
+
+}
+
+
+
+void ADesktopGameModeBase::make_map_for_location()
+{
+
+	for (int j = 0; j < 21; j++)
+	{
+		MapBoneLocationLeft.Add(j, FVector(0, 0, 0));
+		MapBoneLocationRight.Add(j, FVector(0, 0, 0));
+	}
+}
+
+
+
+void ADesktopGameModeBase::make_map_bone_name()
+{
+	MapBoneLocationNameLeft.Add(0, FString("b_l_wrist"));
+	MapBoneLocationNameLeft.Add(1, FString("b_l_thumb0"));
+	MapBoneLocationNameLeft.Add(2, FString("b_l_thumb1"));
+	MapBoneLocationNameLeft.Add(3, FString("b_l_thumb2"));
+	MapBoneLocationNameLeft.Add(4, FString("b_l_thumb3"));
+	MapBoneLocationNameLeft.Add(5, FString("b_l_index1"));
+	MapBoneLocationNameLeft.Add(6, FString("b_l_index2"));
+	MapBoneLocationNameLeft.Add(7, FString("b_l_index3"));
+	MapBoneLocationNameLeft.Add(9, FString("b_l_middle1"));
+	MapBoneLocationNameLeft.Add(10, FString("b_l_middle2"));
+	MapBoneLocationNameLeft.Add(11, FString("b_l_middle3"));
+	MapBoneLocationNameLeft.Add(13, FString("b_l_ring1"));
+	MapBoneLocationNameLeft.Add(14, FString("b_l_ring2"));
+	MapBoneLocationNameLeft.Add(15, FString("b_l_ring3"));
+	MapBoneLocationNameLeft.Add(17, FString("b_l_pinky1"));
+	MapBoneLocationNameLeft.Add(18, FString("b_l_pinky2"));
+	MapBoneLocationNameLeft.Add(19, FString("b_l_pinky3"));
+
+
+	MapBoneLocationNameRight.Add(0, FString("b_r_wrist"));
+
+	MapBoneLocationNameRight.Add(1, FString("b_r_thumb0"));
+	MapBoneLocationNameRight.Add(2, FString("b_r_thumb1"));
+	MapBoneLocationNameRight.Add(3, FString("b_r_thumb2"));
+	MapBoneLocationNameRight.Add(4, FString("b_r_thumb3"));
+
+	MapBoneLocationNameRight.Add(5, FString("b_r_index1"));
+	MapBoneLocationNameRight.Add(6, FString("b_r_index2"));
+	MapBoneLocationNameRight.Add(7, FString("b_r_index3"));
+
+	MapBoneLocationNameRight.Add(9, FString("b_r_middle1"));
+	MapBoneLocationNameRight.Add(10, FString("b_r_middle2"));
+	MapBoneLocationNameRight.Add(11, FString("b_r_middle3"));
+
+	MapBoneLocationNameRight.Add(13, FString("b_r_ring1"));
+	MapBoneLocationNameRight.Add(14, FString("b_r_ring2"));
+	MapBoneLocationNameRight.Add(15, FString("b_r_ring3"));
+
+	MapBoneLocationNameRight.Add(17, FString("b_r_pinky1"));
+	MapBoneLocationNameRight.Add(18, FString("b_r_pinky2"));
+	MapBoneLocationNameRight.Add(19, FString("b_r_pinky3"));
+}
+
+
+void ADesktopGameModeBase::set_hand_pos_world()
+{
+	cv::Mat handLeft = blaze.handLeftImg;
+	cv::Mat handRight = blaze.handRightImg;
+
+	if (handLeft.size[0] == 21)
+	{
+		HandLeftX = handLeft.at<float>(9, 0);
+		HandLeftY = handLeft.at<float>(9, 1);
+	}
+	if (handRight.size[0] == 21)
+	{
+		HandRightX = handRight.at<float>(9, 0);
+		HandRightY = handRight.at<float>(9, 1);
+	}
+
+
 }
