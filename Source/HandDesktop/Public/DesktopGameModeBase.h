@@ -122,4 +122,11 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "HandCoord")
 	float HandRightY;
 
+
+	UPROPERTY(BlueprintReadWrite, Category = "HandDetected")
+	bool isExistLeft;
+	UPROPERTY(BlueprintReadWrite, Category = "HandDetected")
+	bool isExistRight;
+
+	void check_hand_exist(std::vector<cv::Mat>& imgs_landmarks);
 };

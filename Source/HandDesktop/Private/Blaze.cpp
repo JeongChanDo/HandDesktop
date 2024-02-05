@@ -432,6 +432,8 @@ std::vector<cv::Mat> Blaze::DenormalizeHandLandmarksForBoneLocation(std::vector<
 {
 
     std::vector<cv::Mat> denorm_imgs_landmarks;
+    isExistLeft = false;
+    isExistRight = false;
 
   
     for (int i = 0; i < imgs_landmarks.size(); i++)
@@ -485,6 +487,7 @@ std::vector<cv::Mat> Blaze::DenormalizeHandLandmarksForBoneLocation(std::vector<
             }
             handLeft = squeezed_for_bone.clone();
             handLeftImg = squeezed_for_img.clone();
+            isExistLeft = true;
         }
         else
         {
@@ -498,6 +501,7 @@ std::vector<cv::Mat> Blaze::DenormalizeHandLandmarksForBoneLocation(std::vector<
 
             handRight = squeezed_for_bone.clone();
             handRightImg = squeezed_for_img.clone();
+            isExistRight = true;
         }
         //UE_LOG(LogTemp, Log, TEXT("handLeft rows : %d, cols : %d"), handLeft.size[0], handLeft.size[1]);
     }

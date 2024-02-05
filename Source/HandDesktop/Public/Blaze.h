@@ -91,4 +91,8 @@ public:
 	std::vector<cv::Mat> DenormalizeHandLandmarksForBoneLocation(std::vector<cv::Mat> imgs_landmarks, std::vector<cv::Rect> rects);
 	bool IsLeftHand(cv::Mat normalizedLandmarks);
 
+
+	bool isExistLeft;
+	bool isExistRight;
+
 };

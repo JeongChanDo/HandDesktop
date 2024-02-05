@@ -65,6 +65,7 @@ void ADesktopGameModeBase::ReadFrame()
 	std::vector<cv::Mat> imgs_landmarks = blaze.PredictHandDetections(handImgs);
 	std::vector<cv::Mat> denorm_imgs_landmarks = blaze.DenormalizeHandLandmarksForBoneLocation(imgs_landmarks, handRects);
 
+	check_hand_exist(imgs_landmarks);
 	//make_map_for_rotators(denorm_imgs_landmarks);
 	set_map_for_location();
 	set_hand_pos_world();
@@ -422,4 +423,19 @@ void ADesktopGameModeBase::set_hand_pos_world()
 	}
 
 
+}
+
+
+void ADesktopGameModeBase::check_hand_exist(std::vector<cv::Mat>& imgs_landmarks)
+{
+	if (imgs_landmarks.size() == 0)
+	{
+		isExistLeft = false;
+		isExistRight = false;
+	}
+	else
+	{
+		isExistLeft = blaze.isExistLeft;
+		isExistRight = blaze.isExistRight;
+	}
 }
