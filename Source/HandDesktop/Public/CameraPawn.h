@@ -1,6 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
+
+#include "Windows/AllowWindowsPlatformTypes.h"
+#include <Windows.h>
+#include "Windows/HideWindowsPlatformTypes.h"
+
+
 #include <GameFramework/SpringArmComponent.h>
 #include <Camera/CameraComponent.h>
 
@@ -41,5 +47,15 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
 	class UCameraComponent* camComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = ScreenCoord)
+	int ScreenX = 0;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = ScreenCoord)
+	int ScreenY = 0;
+
+	UFUNCTION(BlueprintCallable, Category=MouseControl)
+	void MouseMove();
+	UFUNCTION(BlueprintCallable, Category = MouseControl)
+	void MouseClick(int status);
 
 };

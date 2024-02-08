@@ -31,12 +31,6 @@ ACameraPawn::ACameraPawn()
 
 
 	HandLeft->SetSkeletalMesh(TempHandLeftMesh.Object);
-	/*
-	HandLeft->SetRelativeLocation(FVector(200, -20, 0));
-	
-	FRotator RotatorLeft(180.0f, 90.0f, 0.0f);
-	HandLeft->SetRelativeRotation(RotatorLeft);
-	*/
 
 	FRotator RotatorLeft(0, 0, 0);
 	HandLeft->SetRelativeRotation(RotatorLeft);
@@ -54,19 +48,6 @@ ACameraPawn::ACameraPawn()
 	HandRight->SetRelativeRotation(RotatorRight);
 
 
-	/*
-	HandRight->SetRelativeLocation(FVector(200, 20, 0));
-
-	FRotator RotatorRight(0, -90.0f, 180.0f);
-	HandRight->SetRelativeRotation(RotatorRight);
-	*/
-
-
-
-
-
-
-
 }
 
 // Called when the game starts or when spawned
@@ -80,7 +61,6 @@ void ACameraPawn::BeginPlay()
 void ACameraPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
 }
 
 // Called to bind functionality to input
@@ -88,5 +68,28 @@ void ACameraPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+}
+
+void ACameraPawn::MouseMove()
+{
+	SetCursorPos(ScreenX, ScreenY);
+}
+
+void ACameraPawn::MouseClick(int status)
+{
+	INPUT input = { 0 };
+	input.type = INPUT_MOUSE;
+
+	if (status == 0)
+		input.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+	else if(status == 1)
+		input.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+	else if(status == 2)
+		input.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+	else if(status == 3)
+		input.mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+	
+	if (status <= 3)
+		SendInput(1, &input, sizeof(INPUT));
 }
 
